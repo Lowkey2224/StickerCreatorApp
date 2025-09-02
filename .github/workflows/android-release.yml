@@ -47,23 +47,51 @@ jobs:
         path: app/build/outputs/apk/release/app-release-unsigned.apk
         retention-days: 30
 
+    - name: Get tag name
+      if: startsWith(github.ref, 'refs/tags/')
+      id: tag_name
+      run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
+      id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
+        tag_name: ${{ steps.tag_name.outputs.TAG_NAME }}
+        release_name: Sticker Creator ${{ steps.tag_name.outputs.TAG_NAME }}
         body: |
-          ## Changes in this release
-          - Automated release from GitHub Actions
-          - APK built and tested automatically
+          ## 📱 Sticker Creator App ${{ steps.tag_name.outputs.TAG_NAME }}
           
-          ## Installation
-          Download the APK and install on your Android device.
+          Create 512x512 WebP stickers from your photos with an intuitive crop interface!
           
-          ## Testing
-          All unit tests passed ✅
+          ### ✨ Features
+          - 📸 Select photos from gallery or camera
+          - ✂️ Interactive crop interface with drag handles
+          - 🖼️ Export as 512x512 WebP format
+          - 🎨 Material Design 3 UI
+          - 📱 Works on Android 7.0+ (API 24+)
+          
+          ### 📥 Installation
+          1. Download the APK file below
+          2. Enable "Install from unknown sources" on your Android device
+          3. Install and enjoy creating stickers!
+          
+          ### ✅ Quality Assurance
+          - All unit tests passed
+          - Automated build and testing
+          - Code quality checks passed
         draft: false
         prerelease: false
+
+    - name: Upload Release APK
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: app/build/outputs/apk/release/app-release-unsigned.apk
+        asset_name: StickerCreator-${{ steps.tag_name.outputs.TAG_NAME }}.apk
+        asset_content_type: application/vnd.android.package-archive
