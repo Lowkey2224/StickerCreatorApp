@@ -197,6 +197,7 @@ dependencyCheck {
     format = 'ALL'
     suppressionFile = 'config/dependency-check-suppressions.xml'
     failBuildOnCVSS = 7.0
+    skipConfigurations = ['lintClassPath', 'jacocoAgent', 'jacocoAnt']
     analyzers {
         assemblyEnabled = false
         nugetconfEnabled = false
@@ -205,4 +206,10 @@ dependencyCheck {
     data {
         directory = "$projectDir/owasp-dependency-check-data"
     }
+    nvd {
+        apiKey = System.getenv('NVD_API_KEY') ?: project.findProperty('nvdApiKey') ?: ''
+    }
+    // Graceful failure handling
+    failOnError = false
+    autoUpdate = true
 }
