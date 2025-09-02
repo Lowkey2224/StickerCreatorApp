@@ -93,23 +93,62 @@ jobs:
       uses: gradle/gradle-build-action@v2
       with:
         gradle-home-cache-cleanup: true
-      
-    - name: Run Snyk to check for vulnerabilities
-      uses: snyk/actions/gradle@master
-      continue-on-error: true
+        
+    - name: Verify Java Environment
+      run: |
+        echo "Java Home: $JAVA_HOME"
+        echo "Java Version: $(java -version)"
+        echo "Gradle Version: $(./gradlew --version)"
+        
+    - name: Run Snyk Security Scan
+      run: |
+        # Install Snyk CLI directly instead of using Docker action
+        npm install -g snyk
+        
+        # Authenticate with Snyk
+        if ! snyk auth ${{ secrets.SNYK_TOKEN }}; then
+          echo "❌ Failed to authenticate with Snyk"
+          echo "Please check if SNYK_TOKEN is properly set in repository secrets"
+          exit 1
+        fi
+        
+        # Run Snyk test with proper error handling
+        echo "🔍 Running Snyk security scan..."
+        
+        # Use set +e to capture exit code without failing immediately
+        set +e
+        snyk test --severity-threshold=high --sarif-file-output=snyk.sarif --file=app/build.gradle
+        SNYK_RESULT=$?
+        set -e
+        
+        if [ $SNYK_RESULT -eq 0 ]; then
+          echo "✅ Snyk scan completed - no high severity issues found"
+        elif [ $SNYK_RESULT -eq 1 ]; then
+          echo "⚠️ Snyk scan found vulnerabilities - check the SARIF report"
+          # This is expected behavior when vulnerabilities are found
+          # Don't fail the action, just upload the results
+        elif [ $SNYK_RESULT -eq 2 ]; then
+          echo "❌ Snyk scan failed due to execution error"
+          echo "This indicates a problem with Snyk execution, not vulnerabilities"
+          exit 1  # Fail the action for execution errors
+        else
+          echo "❌ Snyk scan failed with unexpected exit code: $SNYK_RESULT"
+          echo "This indicates a problem with Snyk execution"
+          exit 1  # Fail the action for unexpected errors
+        fi
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        args: --severity-threshold=high --sarif-file-output=snyk.sarif --file=app/build.gradle
         
-    - name: Check if SARIF file exists
+    - name: Verify SARIF file for upload
       run: |
         if [ -f "snyk.sarif" ]; then
           echo "✅ Snyk SARIF file generated successfully"
           ls -la snyk.sarif
+          echo "📄 SARIF file contents preview:"
+          head -n 10 snyk.sarif
         else
-          echo "⚠️ Snyk SARIF file not generated, creating empty file for upload"
-          echo '{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"Snyk","version":"1.0.0"}},"results":[]}]}' > snyk.sarif
+          echo "❌ SARIF file missing - this should not happen with the new configuration"
+          exit 1
         fi
         
     - name: Upload Snyk Results
