@@ -9,44 +9,44 @@ plugins {
 }
 
 android {
-    namespace 'com.stickercreator.app'
-    compileSdk 34
+    namespace = 'com.stickercreator.app'
+    compileSdk = 34
 
     defaultConfig {
-        applicationId "com.stickercreator.app"
-        minSdk 24
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        applicationId = "com.stickercreator.app"
+        minSdk = 24
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
 
-        testInstrumentationRunner "com.stickercreator.app.HiltTestRunner"
+        testInstrumentationRunner = "com.stickercreator.app.HiltTestRunner"
         vectorDrawables {
-            useSupportLibrary true
+            useSupportLibrary = true
         }
     }
 
     buildTypes {
         debug {
-            testCoverageEnabled true
+            testCoverageEnabled = true
         }
         release {
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     
-    lintOptions {
-        abortOnError true
-        warningsAsErrors false
-        checkReleaseBuilds true
-        checkDependencies true
-        xmlReport true
-        htmlReport true
+    lint {
+        abortOnError = true
+        warningsAsErrors = false
+        checkReleaseBuilds = true
+        checkDependencies = true
+        xmlReport = true
+        htmlReport = true
     }
     
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     
     kotlinOptions {
@@ -54,11 +54,11 @@ android {
     }
     
     buildFeatures {
-        compose true
+        compose = true
     }
     
     composeOptions {
-        kotlinCompilerExtensionVersion '1.5.7'
+        kotlinCompilerExtensionVersion = '1.5.7'
     }
     
     packagingOptions {
@@ -169,9 +169,9 @@ tasks.register('jacocoTestReport', JacocoReport) {
     def debugTree = fileTree(dir: "build/intermediates/javac/debug/classes", excludes: fileFilter)
     def kotlinDebugTree = fileTree(dir: "build/tmp/kotlin-classes/debug", excludes: fileFilter)
     
-    classDirectories.from = files([debugTree, kotlinDebugTree])
-    sourceDirectories.from = files(["src/main/java", "src/main/kotlin"])
-    executionData.from = files("build/jacoco/testDebugUnitTest.exec")
+    classDirectories.setFrom(files([debugTree, kotlinDebugTree]))
+    sourceDirectories.setFrom(files(["src/main/java", "src/main/kotlin"]))
+    executionData.setFrom(files("build/jacoco/testDebugUnitTest.exec"))
 }
 
 // Coverage Verification
