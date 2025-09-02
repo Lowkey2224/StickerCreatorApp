@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Background circle -->
+    <path android:fillColor="#E3F2FD"
+          android:pathData="M24,0A24,24 0 0,1 48,24A24,24 0 0,1 24,48A24,24 0 0,1 0,24A24,24 0 0,1 24,0z" />
+    <!-- Photo/Sticker -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,10 L36,10 Q38,10 38,12 L38,36 Q38,38 36,38 L12,38 Q10,38 10,36 L10,12 Q10,10 12,10 Z"/>
+    <!-- Crop frame -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M16,16 L32,16 L32,32 L16,32 Z"
+        android:strokeColor="#2196F3"
+        android:strokeWidth="2"/>
+    <!-- Handles -->
+    <path android:fillColor="#2196F3" android:pathData="M14,14 L18,14 L18,18 L14,18 Z"/>
+    <path android:fillColor="#2196F3" android:pathData="M30,14 L34,14 L34,18 L30,18 Z"/>
+    <path android:fillColor="#2196F3" android:pathData="M14,30 L18,30 L18,34 L14,34 Z"/>
+    <path android:fillColor="#2196F3" android:pathData="M30,30 L34,30 L34,34 L30,34 Z"/>
+</vector>

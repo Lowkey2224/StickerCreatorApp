@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <group android:scaleX="2.5"
+      android:scaleY="2.5"
+      android:translateX="21.6"
+      android:translateY="21.6">
+    <!-- Photo/Sticker background -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M4,2 L22,2 Q24,2 24,4 L24,22 Q24,24 22,24 L4,24 Q2,24 2,22 L2,4 Q2,2 4,2 Z"/>
+    
+    <!-- Crop selection frame -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M6,6 L20,6 L20,20 L6,20 Z"
+        android:strokeColor="#2196F3"
+        android:strokeWidth="1"/>
+    
+    <!-- Corner handles -->
+    <path android:fillColor="#2196F3" android:pathData="M5,5 L7,5 L7,7 L5,7 Z"/>
+    <path android:fillColor="#2196F3" android:pathData="M19,5 L21,5 L21,7 L19,7 Z"/>
+    <path android:fillColor="#2196F3" android:pathData="M5,19 L7,19 L7,21 L5,21 Z"/>
+    <path android:fillColor="#2196F3" android:pathData="M19,19 L21,19 L21,21 L19,21 Z"/>
+    
+    <!-- Sample image content -->
+    <path
+        android:fillColor="#81C784"
+        android:pathData="M4,16 Q8,12 12,14 Q16,10 22,12 L22,22 Q22,23 21,23 L5,23 Q4,23 4,22 Z"/>
+    
+    <!-- Sun -->
+    <path android:fillColor="#FFC107" android:pathData="M18,8 Q20,8 20,10 Q20,12 18,12 Q16,12 16,10 Q16,8 18,8 Z"/>
+    
+    <!-- Scissors icon (crop tool) -->
+    <path
+        android:fillColor="#FF5722"
+        android:pathData="M9,3 L11,5 L13,3 L15,5 L13,7 L11,5 L9,7 Z"/>
+  </group>
+</vector>
