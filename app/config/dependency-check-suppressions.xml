@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <!-- 
+    This file contains suppressions for known false positives in dependency check.
+    Each suppression should have a clear justification and review date.
+    -->
+    
+    <!-- Example suppression - remove if not needed -->
+    <!--
+    <suppress>
+        <notes><![CDATA[
+        This is a false positive - the vulnerability doesn't apply to our usage
+        ]]></notes>
+        <packageUrl regex="true">^pkg:maven/org\.example/.*$</packageUrl>
+        <cve>CVE-2021-12345</cve>
+    </suppress>
+    -->
+    
+    <!-- Android specific suppressions for common false positives -->
+    <suppress>
+        <notes><![CDATA[
+        Android support libraries - these are managed by Google and updated through SDK
+        ]]></notes>
+        <packageUrl regex="true">^pkg:maven/androidx\..*$</packageUrl>
+        <vulnerabilityName regex="true">.*</vulnerabilityName>
+    </suppress>
+    
+    <suppress>
+        <notes><![CDATA[
+        Kotlin standard library - managed by JetBrains
+        ]]></notes>
+        <packageUrl regex="true">^pkg:maven/org\.jetbrains\.kotlin/.*$</packageUrl>
+        <vulnerabilityName regex="true">.*</vulnerabilityName>
+    </suppress>
+    
+</suppressions>

@@ -3,6 +3,9 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'com.google.dagger.hilt.android'
     id 'kotlin-kapt'
+    id 'io.gitlab.arturbosch.detekt' version '1.23.4'
+    id 'jacoco'
+    id 'org.owasp.dependencycheck'
 }
 
 android {
@@ -23,10 +26,22 @@ android {
     }
 
     buildTypes {
+        debug {
+            testCoverageEnabled true
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
+    
+    lintOptions {
+        abortOnError true
+        warningsAsErrors false
+        checkReleaseBuilds true
+        checkDependencies true
+        xmlReport true
+        htmlReport true
     }
     
     compileOptions {
@@ -108,4 +123,81 @@ dependencies {
     
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
+    
+    // QA Tools
+    detektPlugins 'io.gitlab.arturbosch.detekt:detekt-formatting:1.23.4'
+}
+
+// Detekt Configuration
+detekt {
+    toolVersion = "1.23.4"
+    config = files("$projectDir/config/detekt/detekt.yml")
+    buildUponDefaultConfig = true
+    allRules = false
+    
+    reports {
+        html.required = true
+        xml.required = true
+        txt.required = false
+        sarif.required = false
+        md.required = false
+    }
+}
+
+// JaCoCo Configuration
+jacoco {
+    toolVersion = "0.8.8"
+}
+
+tasks.register('jacocoTestReport', JacocoReport) {
+    dependsOn "testDebugUnitTest"
+    group = "Reporting"
+    description = "Generate Jacoco coverage reports"
+
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+
+    def fileFilter = [
+        '**/R.class', '**/R$*.class', '**/BuildConfig.*', '**/Manifest*.*',
+        '**/*Test*.*', 'android/**/*.*', '**/*$WhenMappings.*',
+        '**/*Hilt*.*', '**/*_Factory.*', '**/*_MembersInjector.*'
+    ]
+    
+    def debugTree = fileTree(dir: "build/intermediates/javac/debug/classes", excludes: fileFilter)
+    def kotlinDebugTree = fileTree(dir: "build/tmp/kotlin-classes/debug", excludes: fileFilter)
+    
+    classDirectories.from = files([debugTree, kotlinDebugTree])
+    sourceDirectories.from = files(["src/main/java", "src/main/kotlin"])
+    executionData.from = files("build/jacoco/testDebugUnitTest.exec")
+}
+
+// Coverage Verification
+tasks.register('jacocoTestCoverageVerification', JacocoCoverageVerification) {
+    dependsOn "jacocoTestReport"
+    
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.70 // 70% coverage minimum
+            }
+        }
+    }
+}
+
+// OWASP Dependency Check Configuration
+dependencyCheck {
+    format = 'ALL'
+    suppressionFile = 'config/dependency-check-suppressions.xml'
+    failBuildOnCVSS = 7.0
+    analyzers {
+        assemblyEnabled = false
+        nugetconfEnabled = false
+        nuspecEnabled = false
+    }
+    data {
+        directory = "$projectDir/owasp-dependency-check-data"
+    }
 }
