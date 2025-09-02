@@ -12,7 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.io.OutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,14 +19,19 @@ import javax.inject.Singleton
 class ImageRepository @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    
+
+    companion object {
+        private const val STICKER_SIZE = 512
+        private const val WEBP_QUALITY = 100
+    }
+
     suspend fun saveImageAsWebP(
         bitmap: Bitmap,
         filename: String = "sticker_${System.currentTimeMillis()}.webp"
     ): Result<Uri> = withContext(Dispatchers.IO) {
         try {
             val resizedBitmap = resizeBitmapTo512x512(bitmap)
-            
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 saveImageToMediaStore(resizedBitmap, filename)
             } else {
@@ -37,11 +41,11 @@ class ImageRepository @Inject constructor(
             Result.failure(e)
         }
     }
-    
+
     private fun resizeBitmapTo512x512(bitmap: Bitmap): Bitmap {
-        return Bitmap.createScaledBitmap(bitmap, 512, 512, true)
+        return Bitmap.createScaledBitmap(bitmap, STICKER_SIZE, STICKER_SIZE, true)
     }
-    
+
     private fun saveImageToMediaStore(bitmap: Bitmap, filename: String): Result<Uri> {
         val resolver = context.contentResolver
         val contentValues = ContentValues().apply {
@@ -49,13 +53,13 @@ class ImageRepository @Inject constructor(
             put(MediaStore.MediaColumns.MIME_TYPE, "image/webp")
             put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/StickerCreator")
         }
-        
+
         val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
             ?: return Result.failure(Exception("Failed to create MediaStore entry"))
-        
+
         return try {
             resolver.openOutputStream(uri)?.use { outputStream ->
-                bitmap.compress(Bitmap.CompressFormat.WEBP, 100, outputStream)
+                bitmap.compress(Bitmap.CompressFormat.WEBP, WEBP_QUALITY, outputStream)
             }
             Result.success(uri)
         } catch (e: Exception) {
@@ -63,24 +67,24 @@ class ImageRepository @Inject constructor(
             Result.failure(e)
         }
     }
-    
+
     private fun saveImageToExternalStorage(bitmap: Bitmap, filename: String): Result<Uri> {
         val picturesDir = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
             "StickerCreator"
         )
-        
+
         if (!picturesDir.exists()) {
             picturesDir.mkdirs()
         }
-        
+
         val file = File(picturesDir, filename)
-        
+
         return try {
             FileOutputStream(file).use { outputStream ->
-                bitmap.compress(Bitmap.CompressFormat.WEBP, 100, outputStream)
+                bitmap.compress(Bitmap.CompressFormat.WEBP, WEBP_QUALITY, outputStream)
             }
-            
+
             // Notify media scanner
             val uri = Uri.fromFile(file)
             MediaStore.Images.Media.insertImage(
@@ -89,7 +93,7 @@ class ImageRepository @Inject constructor(
                 filename,
                 "Sticker created with Sticker Creator"
             )
-            
+
             Result.success(uri)
         } catch (e: Exception) {
             Result.failure(e)

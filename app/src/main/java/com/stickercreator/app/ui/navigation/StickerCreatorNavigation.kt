@@ -23,7 +23,7 @@ fun StickerCreatorNavigation(
                 }
             )
         }
-        
+
         composable("crop/{imageUri}") { backStackEntry ->
             val imageUri = backStackEntry.arguments?.getString("imageUri") ?: ""
             CropScreen(

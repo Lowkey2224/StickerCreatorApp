@@ -43,7 +43,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.google.accompanist.permissions.shouldShowRationale
 import com.stickercreator.app.R
 import com.stickercreator.app.ui.components.PermissionDialog
 import java.io.File
@@ -57,12 +56,12 @@ fun HomeScreen(
     val context = LocalContext.current
     var showPermissionDialog by remember { mutableStateOf(false) }
     var permissionType by remember { mutableStateOf("") }
-    
+
     // Permissions
     val cameraPermission = rememberPermissionState(
         android.Manifest.permission.CAMERA
     )
-    
+
     val storagePermission = rememberPermissionState(
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             android.Manifest.permission.READ_MEDIA_IMAGES
@@ -70,7 +69,7 @@ fun HomeScreen(
             android.Manifest.permission.READ_EXTERNAL_STORAGE
         }
     )
-    
+
     // Camera launcher
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
@@ -81,14 +80,14 @@ fun HomeScreen(
             }
         }
     }
-    
+
     // Gallery launcher
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { onImageSelected(it.toString()) }
     }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -120,18 +119,18 @@ fun HomeScreen(
                             style = MaterialTheme.typography.headlineMedium,
                             textAlign = TextAlign.Center
                         )
-                        
+
                         Spacer(modifier = Modifier.height(8.dp))
-                        
+
                         Text(
                             text = "Select a photo to crop into a 512x512 WebP sticker",
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        
+
                         Spacer(modifier = Modifier.height(32.dp))
-                        
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
@@ -155,9 +154,9 @@ fun HomeScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(stringResource(R.string.gallery))
                             }
-                            
+
                             Spacer(modifier = Modifier.width(16.dp))
-                            
+
                             OutlinedButton(
                                 onClick = {
                                     if (cameraPermission.status.isGranted) {
@@ -193,7 +192,7 @@ fun HomeScreen(
             }
         }
     }
-    
+
     // Permission Dialog
     if (showPermissionDialog) {
         PermissionDialog(

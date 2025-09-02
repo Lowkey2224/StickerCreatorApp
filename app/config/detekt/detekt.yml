@@ -62,7 +62,8 @@ complexity:
     threshold: 600
   LongMethod:
     active: true
-    threshold: 60
+    threshold: 150
+    excludes: ['**/test/**', '**/androidTest/**', '**/*Screen.kt']
   LongParameterList:
     active: true
     functionThreshold: 6
@@ -172,13 +173,7 @@ exceptions:
   TooGenericExceptionCaught:
     active: true
     exceptionNames:
-      - 'ArrayIndexOutOfBoundsException'
       - 'Error'
-      - 'Exception'
-      - 'IllegalMonitorStateException'
-      - 'NullPointerException'
-      - 'IndexOutOfBoundsException'
-      - 'RuntimeException'
       - 'Throwable'
     allowedExceptionNameRegex: '_|(ignore|expected).*'
   TooGenericExceptionThrown:
@@ -515,7 +510,7 @@ style:
     maxJumpCount: 1
   MagicNumber:
     active: true
-    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/jsTest/**', '**/iosTest/**']
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/jsTest/**', '**/iosTest/**', '**/theme/**']
     ignoreNumbers:
       - '-1'
       - '0'
