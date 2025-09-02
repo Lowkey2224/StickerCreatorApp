@@ -158,6 +158,8 @@ tasks.register('jacocoTestReport', JacocoReport) {
         xml.required = true
         html.required = true
         csv.required = false
+        xml.outputLocation = file("$buildDir/reports/jacoco/test/jacocoTestReport.xml")
+        html.outputLocation = file("$buildDir/reports/jacoco/test/html")
     }
 
     def fileFilter = [
@@ -166,12 +168,15 @@ tasks.register('jacocoTestReport', JacocoReport) {
         '**/*Hilt*.*', '**/*_Factory.*', '**/*_MembersInjector.*'
     ]
     
-    def debugTree = fileTree(dir: "build/intermediates/javac/debug/classes", excludes: fileFilter)
-    def kotlinDebugTree = fileTree(dir: "build/tmp/kotlin-classes/debug", excludes: fileFilter)
+    def debugTree = fileTree(dir: "$buildDir/intermediates/javac/debug/classes", excludes: fileFilter)
+    def kotlinDebugTree = fileTree(dir: "$buildDir/tmp/kotlin-classes/debug", excludes: fileFilter)
     
     classDirectories.setFrom(files([debugTree, kotlinDebugTree]))
     sourceDirectories.setFrom(files(["src/main/java", "src/main/kotlin"]))
-    executionData.setFrom(files("build/jacoco/testDebugUnitTest.exec"))
+    executionData.setFrom(fileTree(dir: "$buildDir", includes: [
+        "jacoco/testDebugUnitTest.exec",
+        "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"
+    ]))
 }
 
 // Coverage Verification

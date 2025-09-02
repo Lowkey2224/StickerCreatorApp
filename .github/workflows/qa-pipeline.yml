@@ -133,14 +133,23 @@ jobs:
       with:
         name: coverage-reports
         path: |
-          app/build/reports/jacoco/jacocoTestReport/
+          app/build/reports/jacoco/test/
         retention-days: 30
+        
+    - name: List Coverage Files (Debug)
+      run: |
+        echo "Checking for coverage files..."
+        find . -name "*.xml" -path "*/jacoco/*" -type f || true
+        ls -la app/build/reports/jacoco/test/ || true
         
     - name: Upload Coverage to Codecov
       uses: codecov/codecov-action@v3
       if: always()
       with:
-        files: app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
+        files: app/build/reports/jacoco/test/jacocoTestReport.xml
+        directory: ./app/build/reports/jacoco/test/
+        flags: unittests
+        name: codecov-umbrella
         fail_ci_if_error: false
         verbose: true
 
