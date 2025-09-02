@@ -205,4 +205,9 @@ dependencyCheck {
     data {
         directory = "$projectDir/owasp-dependency-check-data"
     }
+    nvd {
+        apiKey = System.getenv('NVD_API_KEY') ?: project.findProperty('nvdApiKey') ?: ''
+        maxRetryCount = 10
+        delay = 4000
+    }
 }
