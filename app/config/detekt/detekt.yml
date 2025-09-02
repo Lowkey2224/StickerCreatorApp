@@ -11,12 +11,9 @@ config:
   validation: true
   warningsAsErrors: false
   checkExhaustiveness: false
-  excludes: ''
 
 processors:
   active: true
-  exclude:
-    - 'DetektProgressListener'
   
 console-reports:
   active: true
@@ -57,7 +54,7 @@ complexity:
     threshold: 4
   ComplexInterface:
     active: false
-  ComplexMethod:
+  CyclomaticComplexMethod:
     active: true
     threshold: 15
   LargeClass:
@@ -166,7 +163,7 @@ exceptions:
     active: false
   ThrowingExceptionsWithoutMessageOrCause:
     active: true
-    excludedExceptionTypes:
+    exceptions:
       - 'IllegalArgumentException'
       - 'IllegalStateException'
       - 'IOException'
@@ -227,7 +224,6 @@ formatting:
     active: false
     autoCorrect: true
     indentSize: 4
-    continuationIndentSize: 4
   MaximumLineLength:
     active: true
     maxLineLength: 120
@@ -331,7 +327,6 @@ naming:
     parameterPattern: '[a-z][A-Za-z0-9]*'
     privateParameterPattern: '[a-z][A-Za-z0-9]*'
     excludeClassPattern: '$^'
-    ignoreOverridden: true
   EnumNaming:
     active: true
     enumEntryPattern: '[A-Z][_a-zA-Z0-9]*'
@@ -348,13 +343,11 @@ naming:
     active: true
     functionPattern: '([a-z][a-zA-Z0-9]*)|(`.*`)'
     excludeClassPattern: '$^'
-    ignoreOverridden: true
     ignoreAnnotated: ['Composable']
   FunctionParameterNaming:
     active: true
     parameterPattern: '[a-z][A-Za-z0-9]*'
     excludeClassPattern: '$^'
-    ignoreOverridden: true
   InvalidPackageDeclaration:
     active: false
   MatchingDeclarationName:
@@ -362,7 +355,6 @@ naming:
     mustBeFirst: true
   MemberNameEqualsClassName:
     active: true
-    ignoreOverridden: true
   ObjectPropertyNaming:
     active: true
     constantPattern: '[A-Za-z][_A-Za-z0-9]*'
@@ -387,7 +379,6 @@ naming:
     variablePattern: '[a-z][A-Za-z0-9]*'
     privateVariablePattern: '(_)?[a-z][A-Za-z0-9]*'
     excludeClassPattern: '$^'
-    ignoreOverridden: true
 
 performance:
   active: true
@@ -425,8 +416,6 @@ potential-bugs:
       - 'java.util.HashSet'
       - 'java.util.LinkedHashMap'
       - 'java.util.HashMap'
-  DuplicateCaseInWhenExpression:
-    active: true
   EqualsAlwaysReturnsTrueOrFalse:
     active: true
   EqualsWithHashCodeExist:
@@ -437,7 +426,7 @@ potential-bugs:
     active: false
   IgnoredReturnValue:
     active: false
-    restrictToAnnotatedMethods: true
+    restrictToConfig: true
     returnValueAnnotations:
       - '*.CheckReturnValue'
       - '*.CheckResult'
@@ -455,18 +444,11 @@ potential-bugs:
   LateinitUsage:
     active: false
     excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/jsTest/**', '**/iosTest/**']
-    excludeAnnotatedProperties: []
+    ignoreAnnotated: []
     ignoreOnClassesPattern: ''
   MapGetWithNotNullAssertionOperator:
     active: true
-  MissingWhenCase:
-    active: true
-    allowElseExpression: true
   NullableToStringCall:
-    active: false
-  RedundantElseInWhen:
-    active: true
-  UnconditionalJumpStatementInLoop:
     active: false
   UnnecessaryNotNullOperator:
     active: true
@@ -491,10 +473,6 @@ style:
     active: false
   CollapsibleIfStatements:
     active: false
-  DataClassContainsFunction:
-    active: false
-  DataClassShouldBeImmutable:
-    active: false
   EqualsNullCall:
     active: true
   EqualsOnSignatureLine:
@@ -508,7 +486,7 @@ style:
     includeLineWrapping: false
   ForbiddenComment:
     active: true
-    values:
+    comments:
       - 'TODO:'
       - 'FIXME:'
       - 'STOPSHIP:'
@@ -522,9 +500,6 @@ style:
     methods:
       - 'kotlin.io.println'
       - 'kotlin.io.print'
-  ForbiddenPublicDataClass:
-    active: false
-    excludes: ['**']
   ForbiddenVoid:
     active: false
     ignoreOverridden: false
@@ -534,13 +509,7 @@ style:
     ignoreOverridableFunction: true
     ignoreActualFunction: true
     excludedFunctions: ['describeContents']
-    excludeAnnotatedFunction: ['dagger.Provides']
-  LibraryCodeMustSpecifyReturnType:
-    active: true
-    excludes: ['**']
-  LibraryEntitiesShouldNotBePublic:
-    active: false
-    excludes: ['**']
+    ignoreAnnotated: ['dagger.Provides']
   LoopWithTooManyJumpStatements:
     active: true
     maxJumpCount: 1
@@ -562,10 +531,6 @@ style:
     ignoreEnums: false
     ignoreRanges: false
     ignoreExtensionFunctions: true
-  MandatoryBracesIfStatements:
-    active: false
-  MandatoryBracesLoops:
-    active: false
   MaxLineLength:
     active: true
     maxLineLength: 120
@@ -585,8 +550,6 @@ style:
   OptionalAbstractKeyword:
     active: true
   OptionalUnit:
-    active: false
-  OptionalWhenBraces:
     active: false
   PreferToOverPairSyntax:
     active: false
@@ -623,7 +586,7 @@ style:
     allowNonStandardGrouping: false
   UnnecessaryAbstractClass:
     active: true
-    excludeAnnotatedClasses: ['dagger.Module']
+    ignoreAnnotated: ['dagger.Module']
   UnnecessaryAnnotationUseSiteTarget:
     active: false
   UnnecessaryApply:
@@ -653,7 +616,7 @@ style:
     active: false
   UseDataClass:
     active: false
-    excludeAnnotatedClasses: []
+    ignoreAnnotated: []
     allowVars: false
   UseEmptyCounterpart:
     active: false

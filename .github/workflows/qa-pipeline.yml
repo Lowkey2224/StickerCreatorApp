@@ -21,6 +21,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+      
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -54,6 +57,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+      
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -86,6 +92,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
       
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -144,6 +153,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+      
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -187,6 +199,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
       
     - name: Set up JDK 17
       uses: actions/setup-java@v4
