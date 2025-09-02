@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="72dp"
+    android:viewportWidth="72"
+    android:viewportHeight="72">
+    <!-- Background -->
+    <path android:fillColor="#E3F2FD" android:pathData="M0,0h72v72h-72z" />
+    <!-- Photo frame -->
+    <path android:fillColor="#FFFFFF" android:pathData="M12,9 L60,9 Q63,9 63,12 L63,60 Q63,63 60,63 L12,63 Q9,63 9,60 L9,12 Q9,9 12,9 Z"/>
+    <!-- Crop selection -->
+    <path android:fillColor="@android:color/transparent" android:pathData="M18,18 L54,18 L54,54 L18,54 Z" android:strokeColor="#2196F3" android:strokeWidth="3"/>
+    <!-- Corner handles -->
+    <path android:fillColor="#2196F3" android:pathData="M15,15 L21,15 L21,21 L15,21 Z"/>
+    <path android:fillColor="#2196F3" android:pathData="M51,15 L57,15 L57,21 L51,21 Z"/>
+    <path android:fillColor="#2196F3" android:pathData="M15,51 L21,51 L21,57 L15,57 Z"/>
+    <path android:fillColor="#2196F3" android:pathData="M51,51 L57,51 L57,57 L51,57 Z"/>
+    <!-- Image content -->
+    <path android:fillColor="#81C784" android:pathData="M12,42 Q24,30 36,36 Q48,24 60,30 L60,60 Q60,62 58,62 L14,62 Q12,62 12,60 Z"/>
+    <!-- Sun -->
+    <path android:fillColor="#FFC107" android:pathData="M48,21 Q54,21 54,27 Q54,33 48,33 Q42,33 42,27 Q42,21 48,21 Z"/>
+</vector>

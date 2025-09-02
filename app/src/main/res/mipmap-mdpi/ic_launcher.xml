@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Background -->
+    <path android:fillColor="#E3F2FD"
+          android:pathData="M0,0h48v48h-48z" />
+    <!-- Photo/Sticker -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M8,6 L40,6 Q42,6 42,8 L42,40 Q42,42 40,42 L8,42 Q6,42 6,40 L6,8 Q6,6 8,6 Z"/>
+    <!-- Crop frame -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M12,12 L36,12 L36,36 L12,36 Z"
+        android:strokeColor="#2196F3"
+        android:strokeWidth="2"/>
+    <!-- Handles -->
+    <path android:fillColor="#2196F3" android:pathData="M10,10 L14,10 L14,14 L10,14 Z"/>
+    <path android:fillColor="#2196F3" android:pathData="M34,10 L38,10 L38,14 L34,14 Z"/>
+    <path android:fillColor="#2196F3" android:pathData="M10,34 L14,34 L14,38 L10,38 Z"/>
+    <path android:fillColor="#2196F3" android:pathData="M34,34 L38,34 L38,38 L34,38 Z"/>
+</vector>
