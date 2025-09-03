@@ -74,7 +74,7 @@ jobs:
   snyk-scan:
     name: Snyk Security Scan
     runs-on: ubuntu-latest
-    if: github.event_name != 'schedule' && vars.ENABLE_SNYK == 'true'  # Only run if Snyk is enabled
+    if: github.event_name != 'schedule' && secrets.SNYK_TOKEN != ''  # Only run if Snyk token is available
     
     steps:
     - name: Checkout code
@@ -103,21 +103,30 @@ jobs:
     - name: Run Snyk Security Scan
       run: |
         # Install Snyk CLI directly instead of using Docker action
+        echo "📦 Installing Snyk CLI..."
         npm install -g snyk
         
+        # Verify Snyk installation
+        snyk --version
+        
         # Authenticate with Snyk
+        echo "🔐 Authenticating with Snyk..."
         if ! snyk auth ${{ secrets.SNYK_TOKEN }}; then
           echo "❌ Failed to authenticate with Snyk"
           echo "Please check if SNYK_TOKEN is properly set in repository secrets"
           exit 1
         fi
         
+        # Build the project first to ensure dependencies are resolved
+        echo "🏗️ Building project to resolve dependencies..."
+        ./gradlew app:dependencies --configuration releaseRuntimeClasspath
+        
         # Run Snyk test with proper error handling
         echo "🔍 Running Snyk security scan..."
         
         # Use set +e to capture exit code without failing immediately
         set +e
-        snyk test --severity-threshold=high --sarif-file-output=snyk.sarif --file=app/build.gradle
+        snyk test --severity-threshold=high --sarif-file-output=snyk.sarif --file=app/build.gradle --project-name="StickerCreator"
         SNYK_RESULT=$?
         set -e
         
@@ -176,11 +185,11 @@ jobs:
           echo "| Dependency Review | ${{ needs.dependency-review.result == 'success' && '✅ Passed' || needs.dependency-review.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |"
         fi
         
-        # Handle Snyk results (may be skipped if not enabled)
+        # Handle Snyk results (may be skipped if token not available)
         if [ "${{ needs.snyk-scan.result }}" != "skipped" ]; then
           echo "| Snyk Scan | ${{ needs.snyk-scan.result == 'success' && '✅ Passed' || needs.snyk-scan.result == 'cancelled' && '⏭️ Cancelled' || '⚠️ Issues Found' }} |"
         else
-          echo "| Snyk Scan | ⏭️ Disabled |"
+          echo "| Snyk Scan | ⏭️ Skipped (Token not configured) |"
         fi
         
         echo ""
