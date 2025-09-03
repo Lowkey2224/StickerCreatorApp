@@ -3,17 +3,20 @@ package com.stickercreator.app.data.repository
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
 
 @Singleton
 class ImageRepository @Inject constructor(
@@ -59,7 +62,7 @@ class ImageRepository @Inject constructor(
 
         return try {
             resolver.openOutputStream(uri)?.use { outputStream ->
-                bitmap.compress(Bitmap.CompressFormat.WEBP, WEBP_QUALITY, outputStream)
+                bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, WEBP_QUALITY, outputStream)
             }
             Result.success(uri)
         } catch (e: Exception) {
@@ -68,7 +71,7 @@ class ImageRepository @Inject constructor(
         }
     }
 
-    private fun saveImageToExternalStorage(bitmap: Bitmap, filename: String): Result<Uri> {
+    private suspend fun saveImageToExternalStorage(bitmap: Bitmap, filename: String): Result<Uri> {
         val picturesDir = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
             "StickerCreator"
@@ -82,21 +85,24 @@ class ImageRepository @Inject constructor(
 
         return try {
             FileOutputStream(file).use { outputStream ->
-                bitmap.compress(Bitmap.CompressFormat.WEBP, WEBP_QUALITY, outputStream)
+                bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, WEBP_QUALITY, outputStream)
             }
 
-            // Notify media scanner
-            val uri = Uri.fromFile(file)
-            MediaStore.Images.Media.insertImage(
-                context.contentResolver,
-                file.absolutePath,
-                filename,
-                "Sticker created with Sticker Creator"
-            )
-
+            // Use MediaScannerConnection instead of deprecated insertImage
+            val uri = scanFileToMediaStore(file.absolutePath)
             Result.success(uri)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private suspend fun scanFileToMediaStore(filePath: String): Uri = suspendCancellableCoroutine { continuation ->
+        MediaScannerConnection.scanFile(
+            context,
+            arrayOf(filePath),
+            arrayOf("image/webp")
+        ) { path, uri ->
+            continuation.resume(uri ?: Uri.fromFile(File(path)))
         }
     }
 }
