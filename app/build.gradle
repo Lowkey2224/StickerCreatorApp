@@ -64,11 +64,17 @@ android {
     packagingOptions {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
+            excludes += '/META-INF/INDEX.LIST'
+            excludes += '/META-INF/io.netty.versions.properties'
         }
     }
 }
 
 dependencies {
+    // Security fixes for vulnerable transitive dependencies
+    implementation 'io.netty:netty-handler:4.1.118.Final'
+    implementation 'com.google.protobuf:protobuf-java-util:3.25.5'
+    
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
     implementation 'androidx.activity:activity-compose:1.8.2'
@@ -207,7 +213,13 @@ dependencyCheck {
         directory = "$projectDir/owasp-dependency-check-data"
     }
     nvd {
-        apiKey = System.getenv('NVD_API_KEY') ?: project.findProperty('nvdApiKey') ?: ''
+        // Try environment variable first, then gradle properties, then local.properties
+        def localProperties = new Properties()
+        def localPropertiesFile = project.rootProject.file('local.properties')
+        if (localPropertiesFile.exists()) {
+            localProperties.load(localPropertiesFile.newDataInputStream())
+        }
+        apiKey = System.getenv('NVD_API_KEY') ?: project.findProperty('nvdApiKey') ?: localProperties.getProperty('nvdApiKey') ?: ''
     }
     // Graceful failure handling
     failOnError = false
