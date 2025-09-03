@@ -3,35 +3,50 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'com.google.dagger.hilt.android'
     id 'kotlin-kapt'
+    id 'io.gitlab.arturbosch.detekt' version '1.23.4'
+    id 'jacoco'
+    id 'org.owasp.dependencycheck'
 }
 
 android {
-    namespace 'com.stickercreator.app'
-    compileSdk 34
+    namespace = 'com.stickercreator.app'
+    compileSdk = 34
 
     defaultConfig {
-        applicationId "com.stickercreator.app"
-        minSdk 24
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        applicationId = "com.stickercreator.app"
+        minSdk = 30
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
 
-        testInstrumentationRunner "com.stickercreator.app.HiltTestRunner"
+        testInstrumentationRunner = "com.stickercreator.app.HiltTestRunner"
         vectorDrawables {
-            useSupportLibrary true
+            useSupportLibrary = true
         }
     }
 
     buildTypes {
+        debug {
+            testCoverageEnabled = true
+        }
         release {
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     
+    lint {
+        abortOnError = true
+        warningsAsErrors = false
+        checkReleaseBuilds = true
+        checkDependencies = true
+        xmlReport = true
+        htmlReport = true
+    }
+    
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     
     kotlinOptions {
@@ -39,21 +54,27 @@ android {
     }
     
     buildFeatures {
-        compose true
+        compose = true
     }
     
     composeOptions {
-        kotlinCompilerExtensionVersion '1.5.7'
+        kotlinCompilerExtensionVersion = '1.5.7'
     }
     
     packagingOptions {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
+            excludes += '/META-INF/INDEX.LIST'
+            excludes += '/META-INF/io.netty.versions.properties'
         }
     }
 }
 
 dependencies {
+    // Security fixes for vulnerable transitive dependencies
+    implementation 'io.netty:netty-handler:4.1.118.Final'
+    implementation 'com.google.protobuf:protobuf-java-util:3.25.5'
+    
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
     implementation 'androidx.activity:activity-compose:1.8.2'
@@ -108,4 +129,99 @@ dependencies {
     
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
+    
+    // QA Tools
+    detektPlugins 'io.gitlab.arturbosch.detekt:detekt-formatting:1.23.4'
+}
+
+// Detekt Configuration
+detekt {
+    toolVersion = "1.23.4"
+    config = files("$projectDir/config/detekt/detekt.yml")
+    buildUponDefaultConfig = true
+    allRules = false
+    
+    reports {
+        html.required = true
+        xml.required = true
+        txt.required = false
+        sarif.required = false
+        md.required = false
+    }
+}
+
+// JaCoCo Configuration
+jacoco {
+    toolVersion = "0.8.8"
+}
+
+tasks.register('jacocoTestReport', JacocoReport) {
+    dependsOn "testDebugUnitTest"
+    group = "Reporting"
+    description = "Generate Jacoco coverage reports"
+
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+        xml.outputLocation = file("$buildDir/reports/jacoco/test/jacocoTestReport.xml")
+        html.outputLocation = file("$buildDir/reports/jacoco/test/html")
+    }
+
+    def fileFilter = [
+        '**/R.class', '**/R$*.class', '**/BuildConfig.*', '**/Manifest*.*',
+        '**/*Test*.*', 'android/**/*.*', '**/*$WhenMappings.*',
+        '**/*Hilt*.*', '**/*_Factory.*', '**/*_MembersInjector.*'
+    ]
+    
+    def debugTree = fileTree(dir: "$buildDir/intermediates/javac/debug/classes", excludes: fileFilter)
+    def kotlinDebugTree = fileTree(dir: "$buildDir/tmp/kotlin-classes/debug", excludes: fileFilter)
+    
+    classDirectories.setFrom(files([debugTree, kotlinDebugTree]))
+    sourceDirectories.setFrom(files(["src/main/java", "src/main/kotlin"]))
+    executionData.setFrom(fileTree(dir: "$buildDir", includes: [
+        "jacoco/testDebugUnitTest.exec",
+        "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"
+    ]))
+}
+
+// Coverage Verification
+tasks.register('jacocoTestCoverageVerification', JacocoCoverageVerification) {
+    dependsOn "jacocoTestReport"
+    
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.70 // 70% coverage minimum
+            }
+        }
+    }
+}
+
+// OWASP Dependency Check Configuration
+dependencyCheck {
+    format = 'ALL'
+    suppressionFile = 'config/dependency-check-suppressions.xml'
+    failBuildOnCVSS = 7.0
+    skipConfigurations = ['lintClassPath', 'jacocoAgent', 'jacocoAnt']
+    analyzers {
+        assemblyEnabled = false
+        nugetconfEnabled = false
+        nuspecEnabled = false
+    }
+    data {
+        directory = "$projectDir/owasp-dependency-check-data"
+    }
+    nvd {
+        // Try environment variable first, then gradle properties, then local.properties
+        def localProperties = new Properties()
+        def localPropertiesFile = project.rootProject.file('local.properties')
+        if (localPropertiesFile.exists()) {
+            localProperties.load(localPropertiesFile.newDataInputStream())
+        }
+        apiKey = System.getenv('NVD_API_KEY') ?: project.findProperty('nvdApiKey') ?: localProperties.getProperty('nvdApiKey') ?: ''
+    }
+    // Graceful failure handling
+    failOnError = false
+    autoUpdate = true
 }

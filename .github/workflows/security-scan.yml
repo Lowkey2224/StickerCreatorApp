@@ -1,0 +1,191 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scan daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v4
+      with:
+        fail-on-severity: high
+        allow-licenses: Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause
+        
+  codeql-analysis:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: java
+        queries: security-and-quality
+        
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-home-cache-cleanup: true
+        
+    - name: Build for CodeQL
+      run: ./gradlew assembleDebug
+      
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:java"
+
+  snyk-scan:
+    name: Snyk Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule' && vars.ENABLE_SNYK == 'true'  # Only run if Snyk is enabled
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-home-cache-cleanup: true
+        
+    - name: Verify Java Environment
+      run: |
+        echo "Java Home: $JAVA_HOME"
+        echo "Java Version: $(java -version)"
+        echo "Gradle Version: $(./gradlew --version)"
+        
+    - name: Run Snyk Security Scan
+      run: |
+        # Install Snyk CLI directly instead of using Docker action
+        npm install -g snyk
+        
+        # Authenticate with Snyk
+        if ! snyk auth ${{ secrets.SNYK_TOKEN }}; then
+          echo "❌ Failed to authenticate with Snyk"
+          echo "Please check if SNYK_TOKEN is properly set in repository secrets"
+          exit 1
+        fi
+        
+        # Run Snyk test with proper error handling
+        echo "🔍 Running Snyk security scan..."
+        
+        # Use set +e to capture exit code without failing immediately
+        set +e
+        snyk test --severity-threshold=high --sarif-file-output=snyk.sarif --file=app/build.gradle
+        SNYK_RESULT=$?
+        set -e
+        
+        if [ $SNYK_RESULT -eq 0 ]; then
+          echo "✅ Snyk scan completed - no high severity issues found"
+        elif [ $SNYK_RESULT -eq 1 ]; then
+          echo "⚠️ Snyk scan found vulnerabilities - check the SARIF report"
+          # This is expected behavior when vulnerabilities are found
+          # Don't fail the action, just upload the results
+        elif [ $SNYK_RESULT -eq 2 ]; then
+          echo "❌ Snyk scan failed due to execution error"
+          echo "This indicates a problem with Snyk execution, not vulnerabilities"
+          exit 1  # Fail the action for execution errors
+        else
+          echo "❌ Snyk scan failed with unexpected exit code: $SNYK_RESULT"
+          echo "This indicates a problem with Snyk execution"
+          exit 1  # Fail the action for unexpected errors
+        fi
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        
+    - name: Verify SARIF file for upload
+      run: |
+        if [ -f "snyk.sarif" ]; then
+          echo "✅ Snyk SARIF file generated successfully"
+          ls -la snyk.sarif
+          echo "📄 SARIF file contents preview:"
+          head -n 10 snyk.sarif
+        else
+          echo "❌ SARIF file missing - this should not happen with the new configuration"
+          exit 1
+        fi
+        
+    - name: Upload Snyk Results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: snyk.sarif
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [codeql-analysis, snyk-scan]
+    if: always()
+    
+    steps:
+    - name: Security Scan Summary
+      run: |
+        echo "## 🛡️ Security Scan Summary"
+        echo ""
+        echo "| Scan Type | Status |"
+        echo "|-----------|--------|"
+        echo "| CodeQL Analysis | ${{ needs.codeql-analysis.result == 'success' && '✅ Passed' || '❌ Failed' }} |"
+        
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          echo "| Dependency Review | ${{ needs.dependency-review.result == 'success' && '✅ Passed' || needs.dependency-review.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |"
+        fi
+        
+        # Handle Snyk results (may be skipped if not enabled)
+        if [ "${{ needs.snyk-scan.result }}" != "skipped" ]; then
+          echo "| Snyk Scan | ${{ needs.snyk-scan.result == 'success' && '✅ Passed' || needs.snyk-scan.result == 'cancelled' && '⏭️ Cancelled' || '⚠️ Issues Found' }} |"
+        else
+          echo "| Snyk Scan | ⏭️ Disabled |"
+        fi
+        
+        echo ""
+        echo "### 📋 Security Recommendations"
+        echo "- Review any security alerts in the GitHub Security tab"
+        echo "- Keep dependencies updated to latest versions"
+        echo "- Monitor for new vulnerabilities in project dependencies"
+        echo "- Consider enabling Dependabot for automated dependency updates"

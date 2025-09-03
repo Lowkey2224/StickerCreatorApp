@@ -29,19 +29,19 @@ data class CropUiState(
 class CropViewModel @Inject constructor(
     private val imageRepository: ImageRepository
 ) : ViewModel() {
-    
+
     private val _uiState = MutableStateFlow(CropUiState())
     val uiState: StateFlow<CropUiState> = _uiState.asStateFlow()
-    
+
     fun loadImage(context: Context, uri: Uri) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            
+
             try {
                 val inputStream = context.contentResolver.openInputStream(uri)
                 val bitmap = BitmapFactory.decodeStream(inputStream)
                 inputStream?.close()
-                
+
                 if (bitmap != null) {
                     val initialCropRect = calculateInitialCropRect(bitmap)
                     _uiState.value = _uiState.value.copy(
@@ -63,13 +63,13 @@ class CropViewModel @Inject constructor(
             }
         }
     }
-    
+
     private fun calculateInitialCropRect(bitmap: Bitmap): Rect {
         val size = min(bitmap.width, bitmap.height).toFloat()
         val centerX = bitmap.width / 2f
         val centerY = bitmap.height / 2f
         val halfSize = size / 2f
-        
+
         return Rect(
             left = centerX - halfSize,
             top = centerY - halfSize,
@@ -77,25 +77,25 @@ class CropViewModel @Inject constructor(
             bottom = centerY + halfSize
         )
     }
-    
+
     fun updateCropRect(newRect: Rect) {
         _uiState.value = _uiState.value.copy(cropRect = newRect)
     }
-    
+
     fun resetCrop() {
         _uiState.value.bitmap?.let { bitmap ->
             val initialCropRect = calculateInitialCropRect(bitmap)
             _uiState.value = _uiState.value.copy(cropRect = initialCropRect)
         }
     }
-    
-    fun saveCroppedImage(context: Context) {
+
+    fun saveCroppedImage() {
         val bitmap = _uiState.value.bitmap ?: return
         val cropRect = _uiState.value.cropRect
-        
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
-            
+
             try {
                 // Create cropped bitmap
                 val croppedBitmap = Bitmap.createBitmap(
@@ -105,10 +105,10 @@ class CropViewModel @Inject constructor(
                     (cropRect.width.toInt()).coerceAtMost(bitmap.width - cropRect.left.toInt()),
                     (cropRect.height.toInt()).coerceAtMost(bitmap.height - cropRect.top.toInt())
                 )
-                
+
                 // Save as WebP
                 val result = imageRepository.saveImageAsWebP(croppedBitmap)
-                
+
                 result.fold(
                     onSuccess = {
                         _uiState.value = _uiState.value.copy(
@@ -124,7 +124,7 @@ class CropViewModel @Inject constructor(
                         )
                     }
                 )
-                
+
                 // Clean up cropped bitmap
                 if (croppedBitmap != bitmap) {
                     croppedBitmap.recycle()
@@ -137,7 +137,7 @@ class CropViewModel @Inject constructor(
             }
         }
     }
-    
+
     fun clearMessage() {
         _uiState.value = _uiState.value.copy(message = null)
     }

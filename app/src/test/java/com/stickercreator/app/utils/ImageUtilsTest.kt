@@ -39,4 +39,3 @@ fun calculateCropDimensions(width: Int, height: Int): Pair<Int, Int> {
 fun isValidImageDimension(width: Int, height: Int): Boolean {
     return width > 0 && height > 0 && width <= 4096 && height <= 4096
 }
-
