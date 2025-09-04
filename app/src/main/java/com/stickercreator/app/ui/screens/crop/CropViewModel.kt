@@ -2,12 +2,12 @@ package com.stickercreator.app.ui.screens.crop
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stickercreator.app.data.repository.ImageRepository
+import com.stickercreator.app.utils.ImageUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,12 +38,29 @@ class CropViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true)
 
             try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val bitmap = BitmapFactory.decodeStream(inputStream)
-                inputStream?.close()
+                // Validate URI using ImageUtils
+                if (uri == Uri.EMPTY || uri.toString().isEmpty()) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        message = "Invalid image URI"
+                    )
+                    return@launch
+                }
 
-                if (bitmap != null) {
-                    val initialCropRect = calculateInitialCropRect(bitmap)
+                // Check if we can access the image
+                if (!ImageUtils.canAccessImage(context, uri)) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        message = "Unable to access image. Please check permissions."
+                    )
+                    return@launch
+                }
+
+                // Safely load the bitmap with memory management
+                val bitmap = ImageUtils.safeLoadBitmap(context, uri)
+
+                if (ImageUtils.isValidBitmap(bitmap)) {
+                    val initialCropRect = calculateInitialCropRect(bitmap!!)
                     _uiState.value = _uiState.value.copy(
                         bitmap = bitmap,
                         cropRect = initialCropRect,
@@ -52,10 +69,23 @@ class CropViewModel @Inject constructor(
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        message = "Failed to load image"
+                        message = "Failed to decode image. The file may be corrupted or unsupported."
                     )
                 }
+            } catch (e: SecurityException) {
+                android.util.Log.w("CropViewModel", "Permission denied: ${e.message}")
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    message = "Permission denied. Please grant storage permission."
+                )
+            } catch (e: OutOfMemoryError) {
+                android.util.Log.w("CropViewModel", "OutOfMemoryError: ${e.message}")
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    message = "Image too large. Please select a smaller image."
+                )
             } catch (e: Exception) {
+                android.util.Log.e("CropViewModel", "Error loading image: ${e.message}")
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     message = "Error loading image: ${e.message}"
@@ -140,5 +170,13 @@ class CropViewModel @Inject constructor(
 
     fun clearMessage() {
         _uiState.value = _uiState.value.copy(message = null)
+    }
+
+    fun setError(message: String) {
+        _uiState.value = _uiState.value.copy(
+            isLoading = false,
+            isSaving = false,
+            message = message
+        )
     }
 }

@@ -78,7 +78,7 @@
 ### **CI/CD Pipeline**
 
 The QA pipeline runs automatically on:
-- Push to `main`, `develop`, or `more-tests` branches
+- Push to `main` or `develop` branches
 - Pull requests to `main` or `develop`
 
 **Pipeline Features**:

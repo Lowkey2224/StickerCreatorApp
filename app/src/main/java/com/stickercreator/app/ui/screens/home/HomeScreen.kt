@@ -3,6 +3,8 @@ package com.stickercreator.app.ui.screens.home
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,18 +46,22 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.stickercreator.app.R
+import com.stickercreator.app.ui.components.ErrorHandlerProvider
+import com.stickercreator.app.ui.components.ErrorSeverity
 import com.stickercreator.app.ui.components.PermissionDialog
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onImageSelected: (String) -> Unit,
+    onNavigateToDevSettings: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
-    var showPermissionDialog by remember { mutableStateOf(false) }
-    var permissionType by remember { mutableStateOf("") }
+    ErrorHandlerProvider { errorHandler ->
+        val context = LocalContext.current
+        var showPermissionDialog by remember { mutableStateOf(false) }
+        var permissionType by remember { mutableStateOf("") }
 
     // Permissions
     val cameraPermission = rememberPermissionState(
@@ -70,23 +76,55 @@ fun HomeScreen(
         }
     )
 
-    // Camera launcher
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success) {
-            viewModel.tempImageUri?.let { uri ->
-                onImageSelected(uri.toString())
+        // Camera launcher
+        val cameraLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.TakePicture()
+        ) { success ->
+            if (success) {
+                viewModel.tempImageUri?.let { uri ->
+                    try {
+                        onImageSelected(uri.toString())
+                    } catch (e: Exception) {
+                        errorHandler.showErrorPopup(
+                            message = "Failed to process camera image",
+                            details = "There was an error processing the image from camera",
+                            severity = ErrorSeverity.ERROR,
+                            exception = e
+                        )
+                    }
+                }
+            } else {
+                errorHandler.showErrorPopup(
+                    message = "Camera capture cancelled or failed",
+                    details = "The photo was not taken successfully",
+                    severity = ErrorSeverity.WARNING
+                )
             }
         }
-    }
 
-    // Gallery launcher
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { onImageSelected(it.toString()) }
-    }
+        // Gallery launcher
+        val galleryLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent()
+        ) { uri: Uri? ->
+            if (uri != null) {
+                try {
+                    onImageSelected(uri.toString())
+                } catch (e: Exception) {
+                    errorHandler.showErrorPopup(
+                        message = "Failed to process selected image",
+                        details = "There was an error processing the image from gallery: ${uri}",
+                        severity = ErrorSeverity.ERROR,
+                        exception = e
+                    )
+                }
+            } else {
+                errorHandler.showErrorPopup(
+                    message = "No image selected",
+                    details = "Please select an image from the gallery",
+                    severity = ErrorSeverity.INFO
+                )
+            }
+        }
 
     Scaffold(
         topBar = {
@@ -117,7 +155,12 @@ fun HomeScreen(
                         Text(
                             text = "Create Your Sticker",
                             style = MaterialTheme.typography.headlineMedium,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.combinedClickable(
+                                onLongClick = {
+                                    onNavigateToDevSettings()
+                                }
+                            ) {}
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -160,17 +203,26 @@ fun HomeScreen(
                             OutlinedButton(
                                 onClick = {
                                     if (cameraPermission.status.isGranted) {
-                                        val tempFile = File(
-                                            context.cacheDir,
-                                            "temp_photo_${System.currentTimeMillis()}.jpg"
-                                        )
-                                        val tempUri = FileProvider.getUriForFile(
-                                            context,
-                                            "${context.packageName}.fileprovider",
-                                            tempFile
-                                        )
-                                        viewModel.tempImageUri = tempUri
-                                        cameraLauncher.launch(tempUri)
+                                        try {
+                                            val tempFile = File(
+                                                context.cacheDir,
+                                                "temp_photo_${System.currentTimeMillis()}.jpg"
+                                            )
+                                            val tempUri = FileProvider.getUriForFile(
+                                                context,
+                                                "${context.packageName}.fileprovider",
+                                                tempFile
+                                            )
+                                            viewModel.tempImageUri = tempUri
+                                            cameraLauncher.launch(tempUri)
+                                        } catch (e: Exception) {
+                                            errorHandler.showErrorPopup(
+                                                message = "Failed to prepare camera",
+                                                details = "Could not create temporary file for camera capture",
+                                                severity = ErrorSeverity.ERROR,
+                                                exception = e
+                                            )
+                                        }
                                     } else {
                                         permissionType = "camera"
                                         showPermissionDialog = true
@@ -213,4 +265,5 @@ fun HomeScreen(
             onDismiss = { showPermissionDialog = false }
         )
     }
+    } // Close ErrorHandlerProvider
 }

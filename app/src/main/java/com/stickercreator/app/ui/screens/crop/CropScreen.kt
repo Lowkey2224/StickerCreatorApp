@@ -1,7 +1,6 @@
 package com.stickercreator.app.ui.screens.crop
 
 import android.graphics.Bitmap
-import android.net.Uri
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -28,8 +27,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -54,6 +51,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.stickercreator.app.R
+import com.stickercreator.app.ui.components.CropDebugOverlay
+import com.stickercreator.app.ui.components.ErrorHandlerProvider
+import com.stickercreator.app.ui.components.ErrorSeverity
+import com.stickercreator.app.utils.FeatureFlags
+import com.stickercreator.app.utils.ImageUtils
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -69,49 +71,76 @@ fun CropScreen(
     onSaved: () -> Unit,
     viewModel: CropViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
+    ErrorHandlerProvider { errorHandler ->
+        val context = LocalContext.current
+        val uiState by viewModel.uiState.collectAsState()
 
-    val uiState by viewModel.uiState.collectAsState()
-
-    LaunchedEffect(imageUri) {
-        viewModel.loadImage(context, Uri.parse(imageUri))
-    }
-
-    LaunchedEffect(uiState.message) {
-        uiState.message?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            viewModel.clearMessage()
+        LaunchedEffect(imageUri) {
+            if (imageUri.isNotEmpty()) {
+                val uri = ImageUtils.safeParseUri(imageUri)
+                if (uri != null) {
+                    viewModel.loadImage(context, uri)
+                } else {
+                    errorHandler.showErrorPopup(
+                        message = "Invalid image URI format",
+                        details = "The image URI could not be parsed: $imageUri",
+                        severity = ErrorSeverity.ERROR
+                    )
+                }
+            } else {
+                errorHandler.showErrorPopup(
+                    message = "No image URI provided",
+                    details = "The navigation did not provide a valid image URI",
+                    severity = ErrorSeverity.ERROR
+                )
+            }
         }
-    }
 
-    LaunchedEffect(uiState.isSaved) {
-        if (uiState.isSaved) {
-            onSaved()
+        LaunchedEffect(uiState.message) {
+            uiState.message?.let { message ->
+                // Determine severity based on message content
+                val severity = when {
+                    message.contains("permission", ignoreCase = true) -> ErrorSeverity.WARNING
+                    message.contains("too large", ignoreCase = true) -> ErrorSeverity.WARNING
+                    message.contains("failed", ignoreCase = true) -> ErrorSeverity.ERROR
+                    else -> ErrorSeverity.ERROR
+                }
+                
+                errorHandler.showErrorPopup(
+                    message = message,
+                    details = "This error occurred during image processing",
+                    severity = severity
+                )
+                viewModel.clearMessage()
+            }
         }
-    }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.crop_image)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    if (uiState.bitmap != null) {
-                        IconButton(
-                            onClick = { viewModel.resetCrop() }
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Reset")
+        LaunchedEffect(uiState.isSaved) {
+            if (uiState.isSaved) {
+                onSaved()
+            }
+        }
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.crop_image)) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        if (uiState.bitmap != null) {
+                            IconButton(
+                                onClick = { viewModel.resetCrop() }
+                            ) {
+                                Icon(Icons.Default.Refresh, contentDescription = "Reset")
+                            }
                         }
                     }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+                )
+            }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -137,12 +166,23 @@ fun CropScreen(
                             .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CropImageView(
-                            bitmap = uiState.bitmap!!,
-                            cropRect = uiState.cropRect,
-                            onCropRectChanged = viewModel::updateCropRect,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        Box {
+                            CropImageView(
+                                bitmap = uiState.bitmap!!,
+                                cropRect = uiState.cropRect,
+                                onCropRectChanged = viewModel::updateCropRect,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            
+                            // Debug overlay (only shows in debug builds or when enabled)
+                            if (FeatureFlags.Debug.isErrorPopupsEnabled()) {
+                                CropDebugOverlay(
+                                    cropRect = uiState.cropRect,
+                                    canvasSize = androidx.compose.ui.geometry.Size(1000f, 1000f), // Approximate
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
                     }
 
                     // Bottom controls
@@ -215,6 +255,7 @@ fun CropScreen(
             }
         }
     }
+    } // Close ErrorHandlerProvider
 }
 
 @Composable
@@ -235,16 +276,38 @@ private fun CropImageView(
             contentScale = ContentScale.Fit
         )
 
-        // Crop overlay
+        // Crop overlay with enhanced debugging
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
-                    detectDragGestures { change, dragAmount ->
-                        val canvasSize = Size(size.width.toFloat(), size.height.toFloat())
-                        val newRect = updateCropRect(cropRect, change.position, dragAmount, canvasSize)
-                        onCropRectChanged(newRect)
-                    }
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            if (FeatureFlags.Debug.isDetailedLoggingEnabled()) {
+                                android.util.Log.d("CropInteraction", "Drag started at: $offset")
+                                android.util.Log.d("CropInteraction", "Current crop rect: $cropRect")
+                                android.util.Log.d("CropInteraction", "Canvas size: $size")
+                            }
+                        },
+                        onDragEnd = {
+                            if (FeatureFlags.Debug.isDetailedLoggingEnabled()) {
+                                android.util.Log.d("CropInteraction", "Drag ended. Final crop rect: $cropRect")
+                            }
+                        },
+                        onDrag = { change, dragAmount ->
+                            val canvasSize = Size(size.width.toFloat(), size.height.toFloat())
+                            val oldRect = cropRect
+                            val newRect = updateCropRect(cropRect, change.position, dragAmount, canvasSize)
+                            
+                            if (FeatureFlags.Debug.isDetailedLoggingEnabled()) {
+                                android.util.Log.d("CropInteraction", 
+                                    "Touch: ${change.position}, Drag: $dragAmount, " +
+                                    "Old: $oldRect -> New: $newRect")
+                            }
+                            
+                            onCropRectChanged(newRect)
+                        }
+                    )
                 }
         ) {
             drawCropOverlay(cropRect, size)
